@@ -39,6 +39,22 @@ EOD
 fi
 }
 
+create_default_user()
+{
+# Create a default user
+cat <<EOD | python manage.py shell
+import os
+from django.contrib.auth.models import User
+User.objects.create_user(
+  os.getenv('DD_MY_USER'),
+  os.getenv('DD_MY_MAIL'),
+  os.getenv('DD_MY_PASSWORD'),
+  first_name=os.getenv('DD_MY_FIRST_NAME'),
+  last_name=os.getenv('DD_MY_LAST_NAME')
+)
+EOD
+}
+
 # Allow for bind-mount multiple settings.py overrides
 FILES=$(ls /app/docker/extra_settings/* 2>/dev/null)
 NUM_FILES=$(echo "$FILES" | wc -w)
@@ -134,6 +150,8 @@ then
     echo "Admin password: Initialization detected that the admin user ${DD_ADMIN_USER} already exists in your database."
     echo "If you don't remember the ${DD_ADMIN_USER} password, you can create a new superuser with:"
     echo "$ docker compose exec uwsgi /bin/bash -c 'python manage.py createsuperuser'"
+    echo "Creating default user"
+    create_default_user
     create_announcement_banner
     initialize_data
     exit
@@ -158,6 +176,8 @@ if [ -z "${ADMIN_EXISTS}" ]
 then
   . /entrypoint-first-boot.sh
 
+  echo "Creating default user"
+  create_default_user
   create_announcement_banner
   initialize_data
 fi
